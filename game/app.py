@@ -69,8 +69,23 @@ class GameApp:
             if event.type == pygame.QUIT:
                 self.running = False
                 continue
+            event = self._translate_event(event)
             if self.top:
                 self.top.handle_event(event)
+
+    def _translate_event(self, event):
+        """Mouse events carry positions in real window pixels, but every
+        Button/Slider rect is defined in the low-res internal coordinate
+        space that gets scaled up to fill the window. Rescale event.pos
+        into internal space so clicks actually land on the right widget."""
+        if hasattr(event, "pos"):
+            screen_w, screen_h = self.screen.get_size()
+            x = event.pos[0] * C.INTERNAL_WIDTH / screen_w
+            y = event.pos[1] * C.INTERNAL_HEIGHT / screen_h
+            attrs = dict(event.dict)
+            attrs["pos"] = (x, y)
+            return pygame.event.Event(event.type, attrs)
+        return event
 
     def _draw(self):
         self.internal.fill(C.BLACK)

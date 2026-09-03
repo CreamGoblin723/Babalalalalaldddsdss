@@ -44,6 +44,28 @@ def draw_panel(surface, rect, bg=C.UI_PANEL, border=C.UI_BORDER, border_width=2)
         pygame.draw.rect(surface, border, (cx, cy, tick, tick))
 
 
+def navigate_buttons(buttons, selected, event):
+    """Generic Up/Down + Enter keyboard navigation for a vertical list of
+    Buttons. Returns (new_selected_index, activated). Skips disabled
+    buttons when moving the selection; does nothing if all are disabled."""
+    if event.type != pygame.KEYDOWN or not buttons:
+        return selected, False
+    enabled_indices = [i for i, b in enumerate(buttons) if b.enabled]
+    if not enabled_indices:
+        return selected, False
+    if event.key in (pygame.K_DOWN, pygame.K_s):
+        pos = enabled_indices.index(selected) if selected in enabled_indices else -1
+        return enabled_indices[(pos + 1) % len(enabled_indices)], False
+    if event.key in (pygame.K_UP, pygame.K_w):
+        pos = enabled_indices.index(selected) if selected in enabled_indices else 0
+        return enabled_indices[(pos - 1) % len(enabled_indices)], False
+    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+        if selected in enabled_indices and buttons[selected].callback:
+            buttons[selected].callback()
+        return selected, True
+    return selected, False
+
+
 class Button:
     def __init__(self, rect, label, callback=None, size=14, enabled=True, hotkey=None):
         self.rect = pygame.Rect(rect)

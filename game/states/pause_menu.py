@@ -3,7 +3,7 @@ import pygame
 from game import constants as C
 from game import game_flow
 from game.states.base import State
-from game.ui import Button, draw_text, draw_panel
+from game.ui import Button, draw_text, draw_panel, navigate_buttons
 
 
 class PauseMenuState(State):
@@ -20,6 +20,7 @@ class PauseMenuState(State):
         ]
         self.message = ""
         self.message_timer = 0.0
+        self.selected = 0
 
     def on_resume(self, **kwargs):
         pass
@@ -45,6 +46,7 @@ class PauseMenuState(State):
             return
         for b in self.buttons:
             b.handle_event(event)
+        self.selected, _ = navigate_buttons(self.buttons, self.selected, event)
 
     def update(self, dt):
         if self.message_timer > 0:
@@ -61,7 +63,8 @@ class PauseMenuState(State):
         draw_panel(surface, panel)
         draw_text(surface, "PAUSED", (C.INTERNAL_WIDTH // 2, 42), size=14, color=C.GOLD, center=True, bold=True)
 
-        for b in self.buttons:
+        for i, b in enumerate(self.buttons):
+            b.hovered = b.hovered or i == self.selected
             b.draw(surface)
 
         if self.message:

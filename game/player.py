@@ -51,6 +51,12 @@ class Player:
     def has_ability(self, ability_id: str) -> bool:
         return ability_id in self.abilities
 
+    def has_effect(self, ability_id: str) -> bool:
+        """True if the player benefits from this ability right now, either
+        because they permanently own it or because a bar drink granted a
+        temporary version of it for the current visit to The Strip."""
+        return self.has_ability(ability_id) or bool(self.active_effects.get(f"temp_{ability_id}"))
+
     def add_item(self, item_id: str, count: int = 1):
         self.inventory[item_id] = self.inventory.get(item_id, 0) + count
 

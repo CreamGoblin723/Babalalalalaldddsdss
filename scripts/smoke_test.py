@@ -21,9 +21,12 @@ from game.states.options import OptionsState
 from game.states.overworld import OverworldState
 from game.states.casino_interior import CasinoInteriorState
 from game.states.shop import ShopState
+from game.states.bar import BarState
 from game.states.blackjack import BlackjackState
 from game.states.coinflip import CoinFlipState
 from game.states.overunder import OverUnderState
+from game.states.slots import SlotsState
+from game.states.roulette import RouletteState
 from game.states.pause_menu import PauseMenuState
 from game.states.run_end import RunEndState
 from game import save_manager
@@ -36,9 +39,12 @@ STATE_CLASSES = {
     "overworld": OverworldState,
     "casino_interior": CasinoInteriorState,
     "shop": ShopState,
+    "bar": BarState,
     "blackjack": BlackjackState,
     "coinflip": CoinFlipState,
     "overunder": OverUnderState,
+    "slots": SlotsState,
+    "roulette": RouletteState,
     "pause_menu": PauseMenuState,
     "run_end": RunEndState,
 }
@@ -137,6 +143,25 @@ def main():
     assert isinstance(app.top, OverworldState)
     print("OK: bought ability, back to overworld")
 
+    # Walk to the bartender and order a drink (temporary ability buff)
+    ow = app.top
+    bartender = ow.map["bartender"]
+    app.player.x, app.player.y = bartender.centerx, bartender.centery
+    tick(app)
+    key(app, pygame.K_e)
+    assert isinstance(app.top, BarState)
+    print("OK: bar opened")
+
+    barstate = app.top
+    from game.bar_data import DRINK_ORDER, DRINKS
+    drink = DRINKS[DRINK_ORDER[0]]
+    barstate._buy(0)
+    assert app.player.active_effects.get(f"temp_{drink['grants']}") is True
+    tick(app)
+    app.pop_state()
+    assert isinstance(app.top, OverworldState)
+    print("OK: bought a drink, temp buff active, back to overworld")
+
     ow = app.top
     door = ow.map["casino_door"]
     app.player.x, app.player.y = door.centerx, door.centery
@@ -206,9 +231,65 @@ def main():
     app.pop_state()
 
     assert isinstance(app.top, CasinoInteriorState)
+    # the bar drink bought earlier this visit should still be active in here
+    assert app.player.active_effects.get(f"temp_{drink['grants']}") is True
+    print("OK: bar buff survived into the casino floor")
+
+    slots_pos = TABLES["slots"]["pos"]
+    app.player.x, app.player.y = slots_pos
+    tick(app)
+    key(app, pygame.K_e)
+    assert isinstance(app.top, SlotsState)
+    slotstate = app.top
+    slotstate.bet = 20
+    slotstate._spin()
+    guard = 0
+    while slotstate.phase == "spinning" and guard < 200:
+        slotstate.update(0.05)
+        guard += 1
+    assert slotstate.phase == "result"
+    print("OK: slots resolved:", slotstate.result_text)
+    app.pop_state()
+
+    roulette_pos = TABLES["roulette"]["pos"]
+    app.player.x, app.player.y = roulette_pos
+    tick(app)
+    key(app, pygame.K_e)
+    assert isinstance(app.top, RouletteState)
+    roulettestate = app.top
+    roulettestate.bet = 20
+    roulettestate.choice = "red"
+    roulettestate._spin()
+    guard = 0
+    while roulettestate.phase == "spinning" and guard < 200:
+        roulettestate.update(0.05)
+        guard += 1
+    assert roulettestate.phase == "result"
+    print("OK: roulette resolved:", roulettestate.result_text)
+    app.pop_state()
+
+    assert isinstance(app.top, CasinoInteriorState)
     app.pop_state()
     assert isinstance(app.top, OverworldState)
     print("OK: back at casino_area overworld")
+
+    # returning home should clear the visit's temporary bar buff
+    ow = app.top
+    van = ow.map["van"]
+    app.player.x, app.player.y = van.centerx, van.centery
+    tick(app)
+    key(app, pygame.K_e)
+    assert app.player.map_name == "home"
+    assert not app.player.active_effects.get(f"temp_{drink['grants']}")
+    print("OK: bar buff cleared after returning home")
+
+    # head back out to the Strip for the rest of the smoke test
+    ow = app.top
+    van = ow.map["van"]
+    app.player.x, app.player.y = van.centerx, van.centery
+    tick(app)
+    key(app, pygame.K_e)
+    assert app.player.map_name == "casino_area"
 
     # Pause menu + save
     key(app, pygame.K_ESCAPE)

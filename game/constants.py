@@ -9,10 +9,12 @@ TITLE = "BLOOD & CHIPS"
 
 # The whole game is drawn at a low internal resolution and then scaled
 # up with no smoothing, which is what gives everything its chunky
-# pixel-art look without needing any external art assets.
+# pixel-art look without needing any external art assets. GameApp letterboxes
+# this to fit any real window/fullscreen size while keeping this aspect
+# ratio exact, so the actual on-screen scale factor is computed at runtime
+# rather than fixed here.
 INTERNAL_WIDTH = 320
 INTERNAL_HEIGHT = 213
-PIXEL_SCALE = 3  # INTERNAL_* * PIXEL_SCALE ~= SCREEN_*
 
 TILE_SIZE = 16
 

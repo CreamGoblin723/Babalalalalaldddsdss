@@ -4,7 +4,7 @@ from game import constants as C
 from game import save_manager
 from game import game_flow
 from game.states.base import State
-from game.ui import Button, draw_text
+from game.ui import Button, draw_text, navigate_buttons
 from game.sprites import SKIN_NAMES
 
 
@@ -33,6 +33,8 @@ class LoadMenuState(State):
         back_w = 100
         self.back_button = Button((C.INTERNAL_WIDTH // 2 - back_w // 2, y + 10, back_w, 20),
                                    "BACK", self._back)
+        self.nav_buttons = [b for kind, s, b in self.buttons if kind == "slot"] + [self.back_button]
+        self.selected = 0
 
     def _select(self, slot):
         s = self.slots[slot]
@@ -54,6 +56,7 @@ class LoadMenuState(State):
         for kind, s, b in self.buttons:
             b.handle_event(event)
         self.back_button.handle_event(event)
+        self.selected, _ = navigate_buttons(self.nav_buttons, self.selected, event)
 
     def draw(self, surface):
         surface.fill((16, 14, 22))
@@ -62,6 +65,7 @@ class LoadMenuState(State):
         for kind, s, b in self.buttons:
             if kind != "slot":
                 continue
+            b.hovered = b.hovered or (self.nav_buttons[self.selected] is b)
             b.draw(surface)
             r = b.rect
             if s["occupied"]:
@@ -77,4 +81,5 @@ class LoadMenuState(State):
             if kind == "delete":
                 b.draw(surface)
 
+        self.back_button.hovered = self.back_button.hovered or (self.nav_buttons[self.selected] is self.back_button)
         self.back_button.draw(surface)

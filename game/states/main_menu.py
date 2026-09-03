@@ -4,7 +4,7 @@ from game import constants as C
 from game import save_manager
 from game import game_flow
 from game.states.base import State
-from game.ui import Button, draw_text
+from game.ui import Button, draw_text, navigate_buttons
 
 
 class MainMenuState(State):
@@ -29,6 +29,7 @@ class MainMenuState(State):
             Button((x, y + gap * 3, w, h), "OPTIONS", self._options),
             Button((x, y + gap * 4, w, h), "EXIT", self._exit),
         ]
+        self.selected = 1 if continue_slot is None else 0
 
     def _continue(self):
         slot = save_manager.get_continue_slot()
@@ -53,6 +54,8 @@ class MainMenuState(State):
             b.handle_event(event)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.app.quit()
+            return
+        self.selected, _ = navigate_buttons(self.buttons, self.selected, event)
 
     def update(self, dt):
         self._t += dt
@@ -70,7 +73,8 @@ class MainMenuState(State):
         draw_text(surface, "a gambler's descent", (C.INTERNAL_WIDTH // 2, 58), size=9,
                   color=C.UI_TEXT_DIM, center=True)
 
-        for b in self.buttons:
+        for i, b in enumerate(self.buttons):
+            b.hovered = b.hovered or i == self.selected
             b.draw(surface)
 
         meta = self.app.meta

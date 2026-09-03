@@ -3,7 +3,10 @@ import pygame
 from game import constants as C
 from game.states.topdown import TopDownState
 from game.ui import draw_text
-from game.sprites import get_van_sprite, get_casino_facade, get_shady_man_sprite, get_floor_tile
+from game.sprites import (
+    get_van_sprite, get_casino_facade, get_shady_man_sprite, get_floor_tile,
+    get_bar_counter_sprite, get_bartender_sprite,
+)
 
 
 def _rect(x, y, w, h):
@@ -30,6 +33,7 @@ MAPS = {
         ],
         "casino_door": _rect(C.INTERNAL_WIDTH // 2 - 14, 68, 28, 12),
         "shady_man": _rect(C.INTERNAL_WIDTH // 2 + 70, 40, 16, 16),
+        "bartender": _rect(C.INTERNAL_WIDTH - 70, C.INTERNAL_HEIGHT - 60, 16, 16),
         "van": _rect(20, C.INTERNAL_HEIGHT - 50, 44, 30),
         "spawn": (40, C.INTERNAL_HEIGHT - 70),
         "label": "The Strip",
@@ -58,7 +62,7 @@ class OverworldState(TopDownState):
 
     def interact_zones(self):
         zones = {}
-        for key in ("van", "casino_door", "shady_man"):
+        for key in ("van", "casino_door", "shady_man", "bartender"):
             if key in self.map:
                 zones[key] = self.map[key]
         return zones
@@ -70,11 +74,17 @@ class OverworldState(TopDownState):
             self.app.push_state("casino_interior")
         elif name == "shady_man":
             self.app.push_state("shop")
+        elif name == "bartender":
+            self.app.push_state("bar")
 
     def _use_van(self):
         if self.map_name == "home":
             self._load_map("casino_area", spawn=MAPS["casino_area"]["spawn"])
         else:
+            # heading back home ends this visit to The Strip: any
+            # once-per-visit ability charges (Second Chance, Double Take,
+            # ...) and bar-drink buffs wear off here, as advertised.
+            self.app.player.active_effects = {}
             self._load_map("home", spawn=MAPS["home"]["spawn"])
 
     def handle_event(self, event):
@@ -106,6 +116,14 @@ class OverworldState(TopDownState):
             npc = get_shady_man_sprite(pixel_size=2)
             surface.blit(npc, (shady.centerx - npc.get_width() // 2, shady.centery - npc.get_height() // 2))
 
+            bartender_zone = self.map["bartender"]
+            counter = get_bar_counter_sprite(pixel_size=1)
+            surface.blit(counter, (bartender_zone.centerx - counter.get_width() // 2,
+                                    bartender_zone.top - counter.get_height() + 10))
+            bartender = get_bartender_sprite(pixel_size=2)
+            surface.blit(bartender, (bartender_zone.centerx - bartender.get_width() // 2,
+                                      bartender_zone.centery - bartender.get_height() // 2))
+
         van = self.map.get("van")
         if van:
             van_sprite = get_van_sprite(pixel_size=2)
@@ -117,7 +135,7 @@ class OverworldState(TopDownState):
         player = self.app.player
         if self.prompt:
             label = {"van": "Enter Van [E]", "casino_door": "Enter Casino [E]",
-                      "shady_man": "Talk [E]"}[self.prompt]
+                      "shady_man": "Talk [E]", "bartender": "Order a Drink [E]"}[self.prompt]
             draw_text(surface, label, (int(player.x), int(player.y) - 22), size=8, color=C.GOLD, center=True)
 
         draw_text(surface, self.map["label"], (6, 4), size=9, color=C.UI_TEXT_DIM)

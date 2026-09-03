@@ -11,9 +11,12 @@ from game.states.options import OptionsState
 from game.states.overworld import OverworldState
 from game.states.casino_interior import CasinoInteriorState
 from game.states.shop import ShopState
+from game.states.bar import BarState
 from game.states.blackjack import BlackjackState
 from game.states.coinflip import CoinFlipState
 from game.states.overunder import OverUnderState
+from game.states.slots import SlotsState
+from game.states.roulette import RouletteState
 from game.states.pause_menu import PauseMenuState
 from game.states.run_end import RunEndState
 
@@ -25,9 +28,12 @@ STATE_CLASSES = {
     "overworld": OverworldState,
     "casino_interior": CasinoInteriorState,
     "shop": ShopState,
+    "bar": BarState,
     "blackjack": BlackjackState,
     "coinflip": CoinFlipState,
     "overunder": OverUnderState,
+    "slots": SlotsState,
+    "roulette": RouletteState,
     "pause_menu": PauseMenuState,
     "run_end": RunEndState,
 }

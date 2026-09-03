@@ -6,9 +6,11 @@ from game.ui import draw_text
 from game.sprites import get_table_sprite, get_floor_tile
 
 TABLES = {
-    "blackjack": {"pos": (70, 90), "label": "Blackjack", "state": "blackjack"},
-    "coinflip": {"pos": (160, 60), "label": "Coin Flip", "state": "coinflip"},
-    "overunder": {"pos": (250, 90), "label": "Over/Under", "state": "overunder"},
+    "blackjack": {"pos": (60, 70), "label": "Blackjack", "state": "blackjack"},
+    "coinflip": {"pos": (160, 70), "label": "Coin Flip", "state": "coinflip"},
+    "overunder": {"pos": (260, 70), "label": "Over/Under", "state": "overunder"},
+    "slots": {"pos": (110, 140), "label": "Slots", "state": "slots"},
+    "roulette": {"pos": (210, 140), "label": "Roulette", "state": "roulette"},
 }
 
 TABLE_HITBOX = 20
@@ -21,9 +23,6 @@ class CasinoInteriorState(TopDownState):
         self.exit_zone = pygame.Rect(C.INTERNAL_WIDTH // 2 - 16, C.INTERNAL_HEIGHT - 24, 32, 14)
         self.floor_tile = get_floor_tile("carpet", pixel_size=1, size=16)
         player = self.app.player
-        # once-per-visit ability charges (Second Chance, Double Take) reset
-        # every time you step onto the casino floor
-        player.active_effects = {}
         player.x, player.y = C.INTERNAL_WIDTH // 2, C.INTERNAL_HEIGHT - 40
 
     def on_resume(self, **kwargs):

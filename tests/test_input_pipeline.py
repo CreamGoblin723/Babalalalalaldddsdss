@@ -64,11 +64,14 @@ def test_screen_space_click_outside_button_does_nothing():
 
 def test_translate_event_scales_mousemotion_pos():
     app = make_app()
-    screen_w, screen_h = app.screen.get_size()
-    ev = pygame.event.Event(pygame.MOUSEMOTION, pos=(screen_w, screen_h), rel=(0, 0), buttons=(0, 0, 0))
+    # click the bottom-right corner of the actual rendered (possibly
+    # letterboxed) rect, not the raw screen - that corner must map to
+    # exactly the internal canvas's bottom-right corner.
+    rect = app._render_rect
+    ev = pygame.event.Event(pygame.MOUSEMOTION, pos=(rect.right, rect.bottom), rel=(0, 0), buttons=(0, 0, 0))
     translated = app._translate_event(ev)
-    assert translated.pos[0] == C.INTERNAL_WIDTH
-    assert translated.pos[1] == C.INTERNAL_HEIGHT
+    assert round(translated.pos[0]) == C.INTERNAL_WIDTH
+    assert round(translated.pos[1]) == C.INTERNAL_HEIGHT
 
 
 def test_translate_event_leaves_keydown_untouched():
@@ -76,3 +79,48 @@ def test_translate_event_leaves_keydown_untouched():
     ev = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN, mod=0, unicode="")
     translated = app._translate_event(ev)
     assert translated is ev
+
+
+def test_render_rect_pillarboxes_a_wide_screen():
+    """An ultrawide window is wider than the internal aspect ratio, so bars
+    must appear on the left/right (pillarboxing), full height used."""
+    app = make_app()
+    rect = app._compute_render_rect((2560, 1080))
+    assert rect.h == 1080
+    assert rect.w < 2560
+    assert rect.x > 0
+    assert abs((rect.x * 2) + rect.w - 2560) <= 1  # centered
+
+
+def test_render_rect_letterboxes_a_tall_screen():
+    """A narrow/tall window is narrower than the internal aspect ratio, so
+    bars must appear on the top/bottom (letterboxing), full width used."""
+    app = make_app()
+    rect = app._compute_render_rect((800, 1200))
+    assert rect.w == 800
+    assert rect.h < 1200
+    assert rect.y > 0
+    assert abs((rect.y * 2) + rect.h - 1200) <= 1  # centered
+
+
+def test_click_in_letterbox_bar_hits_nothing():
+    """A click that lands in the black bar (outside the rendered rect)
+    should map outside the internal canvas, not get clamped onto an edge
+    widget."""
+    app = make_app()
+    app._render_rect = app._compute_render_rect((800, 1200))  # force letterboxing
+    ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(400, 5), button=1)  # top bar
+    translated = app._translate_event(ev)
+    assert translated.pos[1] < 0
+
+
+def test_f11_toggles_fullscreen_setting():
+    app = make_app()
+    before = app.settings.get("fullscreen", False)
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F11, mod=0, unicode=""))
+    app._handle_events()
+    assert app.settings.get("fullscreen") != before
+    # toggle back so we don't leave the test suite in fullscreen
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F11, mod=0, unicode=""))
+    app._handle_events()
+    assert app.settings.get("fullscreen") == before

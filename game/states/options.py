@@ -30,13 +30,8 @@ class OptionsState(State):
         settings_manager.save_settings(self.settings)
 
     def _toggle_fullscreen(self):
-        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+        self.app.toggle_fullscreen()
         self.fullscreen_btn.label = self._fs_label()
-        settings_manager.save_settings(self.settings)
-        try:
-            self.app.apply_video_settings()
-        except pygame.error:
-            pass
 
     def _back(self):
         self.app.pop_state()
@@ -63,3 +58,5 @@ class OptionsState(State):
         for i, b in enumerate(self.nav_buttons):
             b.hovered = b.hovered or i == self.selected
             b.draw(surface)
+        draw_text(surface, "(F11 also toggles fullscreen anywhere)", (C.INTERNAL_WIDTH // 2, 112), size=7,
+                  color=C.UI_TEXT_DIM, center=True)

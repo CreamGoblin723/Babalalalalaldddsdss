@@ -7,6 +7,8 @@ giving it a chunky, deliberate pixel-art look.
 """
 import pygame
 
+from game.ui import get_font
+
 _CACHE = {}
 
 
@@ -229,6 +231,10 @@ def get_table_sprite(kind="blackjack", pixel_size=3):
     def build():
         w, h = 32, 20
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        if kind == "slots":
+            return _build_slot_machine_icon(w, h, pixel_size)
+        if kind == "roulette":
+            return _build_roulette_icon(w, h, pixel_size)
         felt = {
             "blackjack": (24, 92, 60),
             "coinflip": (46, 66, 122),
@@ -237,9 +243,38 @@ def get_table_sprite(kind="blackjack", pixel_size=3):
         pygame.draw.ellipse(surf, (58, 36, 26), (0, 4, w, h - 4))
         pygame.draw.ellipse(surf, felt, (2, 5, w - 4, h - 7))
         pygame.draw.ellipse(surf, (232, 181, 74), (2, 5, w - 4, h - 7), 1)
+        # a subtle felt highlight band gives the table a bit of shading depth
+        pygame.draw.arc(surf, (255, 255, 255, 60), (3, 6, w - 6, h - 9), 3.6, 5.6, 1)
         return pygame.transform.scale(surf, (w * pixel_size, h * pixel_size))
 
     return _cached(key, build)
+
+
+def _build_slot_machine_icon(w, h, pixel_size):
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    body = pygame.Rect(w // 2 - 9, 2, 18, h - 3)
+    pygame.draw.rect(surf, (168, 26, 34), body, border_radius=2)
+    pygame.draw.rect(surf, (232, 181, 74), body, 1, border_radius=2)
+    screen = pygame.Rect(body.x + 2, body.y + 2, body.w - 4, 7)
+    pygame.draw.rect(surf, (20, 18, 24), screen)
+    for i, col in enumerate(((214, 46, 46), (232, 181, 74), (68, 214, 122))):
+        pygame.draw.rect(surf, col, (screen.x + 1 + i * 4, screen.y + 1, 3, screen.h - 2))
+    pygame.draw.circle(surf, (232, 181, 74), (body.right + 1, body.y + 5), 2)
+    return pygame.transform.scale(surf, (w * pixel_size, h * pixel_size))
+
+
+def _build_roulette_icon(w, h, pixel_size):
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    cx, cy, r = w // 2, h // 2 + 1, min(w, h) // 2 - 1
+    pygame.draw.circle(surf, (58, 36, 26), (cx, cy), r + 1)
+    for i in range(10):
+        color = (168, 26, 34) if i % 2 == 0 else (20, 20, 24)
+        start = i / 10 * 6.283
+        end = (i + 1) / 10 * 6.283
+        pygame.draw.arc(surf, color, (cx - r, cy - r, r * 2, r * 2), start, end, r)
+    pygame.draw.circle(surf, (232, 181, 74), (cx, cy), r, 1)
+    pygame.draw.circle(surf, (240, 240, 235), (cx, cy), 2)
+    return pygame.transform.scale(surf, (w * pixel_size, h * pixel_size))
 
 
 def get_floor_tile(kind="wood", pixel_size=3, size=16):
@@ -359,5 +394,175 @@ def get_die_face(value: int, size=40):
         for (px, py) in positions.get(value, []):
             pygame.draw.circle(surf, pip, (px, py), r)
         return surf
+
+    return _cached(key, build)
+
+
+# ---------------------------------------------------------------------------
+# Slots & Roulette
+# ---------------------------------------------------------------------------
+def get_slot_symbol(name: str, size=40):
+    key = ("slot_symbol", name, size)
+
+    def build():
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.rect(surf, (18, 16, 22), (0, 0, size, size), border_radius=4)
+        pygame.draw.rect(surf, (70, 64, 78), (0, 0, size, size), 1, border_radius=4)
+        cx, cy = size // 2, size // 2
+        if name == "cherry":
+            r = max(3, size // 7)
+            pygame.draw.line(surf, (70, 140, 60), (cx, cy - r), (cx + 2, cy - r * 3), 2)
+            pygame.draw.circle(surf, (206, 30, 46), (cx - r, cy + r), r)
+            pygame.draw.circle(surf, (206, 30, 46), (cx + r, cy + r), r)
+            pygame.draw.circle(surf, (255, 255, 255, 80), (cx - r - 1, cy + r - 1), max(1, r // 3))
+        elif name == "bell":
+            gold = (232, 181, 74)
+            pygame.draw.polygon(surf, gold, [
+                (cx, cy - size // 3), (cx - size // 3, cy + size // 6),
+                (cx + size // 3, cy + size // 6),
+            ])
+            pygame.draw.rect(surf, gold, (cx - size // 3, cy + size // 6, size * 2 // 3, size // 8))
+            pygame.draw.circle(surf, (156, 116, 42), (cx, cy + size // 6 + size // 8 + 2), size // 12)
+        elif name == "bar":
+            pygame.draw.rect(surf, (20, 20, 24), (4, cy - size // 6, size - 8, size // 3), border_radius=2)
+            pygame.draw.rect(surf, (232, 181, 74), (4, cy - size // 6, size - 8, size // 3), 1, border_radius=2)
+            font = get_font(max(8, size // 4), bold=True)
+            label = font.render("BAR", True, (232, 181, 74))
+            surf.blit(label, label.get_rect(center=(cx, cy)))
+        elif name == "chip":
+            chip = get_chip_icon(radius=size // 2 - 4)
+            surf.blit(chip, chip.get_rect(center=(cx, cy)))
+        elif name == "seven":
+            font = get_font(int(size * 0.6), bold=True)
+            label = font.render("7", True, (232, 181, 74))
+            surf.blit(label, label.get_rect(center=(cx, cy)))
+        return surf
+
+    return _cached(key, build)
+
+
+def get_slot_machine_sprite(pixel_size=3):
+    key = ("slot_machine", pixel_size)
+
+    def build():
+        w, h = 46, 60
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        cabinet = pygame.Rect(3, 6, w - 6, h - 12)
+        pygame.draw.rect(surf, (168, 26, 34), cabinet, border_radius=4)
+        pygame.draw.rect(surf, (232, 181, 74), cabinet, 2, border_radius=4)
+        marquee = pygame.Rect(cabinet.x + 2, cabinet.y + 2, cabinet.w - 4, 10)
+        pygame.draw.rect(surf, (20, 18, 24), marquee, border_radius=2)
+        font = get_font(7, bold=True)
+        label = font.render("LUCKY 7s", True, (232, 181, 74))
+        surf.blit(label, label.get_rect(center=marquee.center))
+        window = pygame.Rect(cabinet.x + 4, marquee.bottom + 3, cabinet.w - 8, 18)
+        pygame.draw.rect(surf, (240, 240, 235), window)
+        pygame.draw.rect(surf, (20, 20, 24), window, 1)
+        for i in range(3):
+            pygame.draw.line(surf, (200, 200, 195), (window.x + (i + 1) * window.w // 3, window.y),
+                              (window.x + (i + 1) * window.w // 3, window.bottom))
+        lever_x = cabinet.right + 1
+        pygame.draw.line(surf, (60, 60, 68), (lever_x, cabinet.y + 6), (lever_x, cabinet.y + 20), 2)
+        pygame.draw.circle(surf, (214, 46, 46), (lever_x, cabinet.y + 4), 3)
+        pygame.draw.rect(surf, (58, 36, 26), (6, cabinet.bottom, w - 12, 4))
+        return pygame.transform.scale(surf, (w * pixel_size, h * pixel_size))
+
+    return _cached(key, build)
+
+
+def get_roulette_wheel_sprite(size=90, wedges=12):
+    key = ("roulette_wheel", size, wedges)
+
+    def build():
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        cx = cy = size // 2
+        r = size // 2 - 2
+        pygame.draw.circle(surf, (58, 36, 26), (cx, cy), r + 3)
+        for i in range(wedges):
+            if i == 0:
+                color = (68, 214, 122)
+            elif i % 2 == 0:
+                color = (168, 26, 34)
+            else:
+                color = (18, 18, 22)
+            start = i / wedges * 6.28318
+            end = (i + 1) / wedges * 6.28318
+            pygame.draw.arc(surf, color, (cx - r, cy - r, r * 2, r * 2), start, end, max(3, r // 3))
+        pygame.draw.circle(surf, (232, 181, 74), (cx, cy), r, 2)
+        pygame.draw.circle(surf, (30, 26, 20), (cx, cy), max(4, r // 4))
+        pygame.draw.circle(surf, (232, 181, 74), (cx, cy), max(4, r // 4), 1)
+        return surf
+
+    return _cached(key, build)
+
+
+def get_number_badge(number: int, color_name: str, size=30):
+    key = ("number_badge", number, color_name, size)
+
+    def build():
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        fill = {"red": (168, 26, 34), "black": (20, 20, 24), "green": (24, 130, 76)}.get(color_name, (80, 80, 80))
+        cx = cy = size // 2
+        pygame.draw.circle(surf, fill, (cx, cy), size // 2 - 1)
+        pygame.draw.circle(surf, (232, 181, 74), (cx, cy), size // 2 - 1, 2)
+        font = get_font(int(size * 0.4), bold=True)
+        label = font.render(str(number), True, (245, 245, 240))
+        surf.blit(label, label.get_rect(center=(cx, cy)))
+        return surf
+
+    return _cached(key, build)
+
+
+# ---------------------------------------------------------------------------
+# The Bar
+# ---------------------------------------------------------------------------
+def get_bar_counter_sprite(pixel_size=3):
+    key = ("bar_counter", pixel_size)
+
+    def build():
+        w, h = 64, 48
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(surf, (58, 36, 26), (0, 0, w, h - 10))
+        pygame.draw.rect(surf, (30, 18, 14), (0, 0, w, h - 10), 3)
+        for shelf_y in (6, 16):
+            pygame.draw.rect(surf, (40, 24, 18), (4, shelf_y, w - 8, 3))
+            bottle_colors = [(168, 26, 34), (68, 214, 122), (232, 181, 74), (86, 52, 122), (46, 66, 122)]
+            for i, bx in enumerate(range(8, w - 8, 8)):
+                color = bottle_colors[i % len(bottle_colors)]
+                pygame.draw.rect(surf, color, (bx, shelf_y - 8, 3, 8))
+        pygame.draw.rect(surf, (92, 58, 40), (0, h - 14, w, 14), border_radius=2)
+        pygame.draw.rect(surf, (232, 181, 74), (0, h - 14, w, 14), 1, border_radius=2)
+        return pygame.transform.scale(surf, (w * pixel_size, h * pixel_size))
+
+    return _cached(key, build)
+
+
+def get_bartender_sprite(pixel_size=3):
+    key = ("bartender", pixel_size)
+
+    def build():
+        palette = {
+            "H": _SKIN_HEAD,
+            "M": (60, 44, 30),    # slicked hair / mustache
+            "A": (240, 240, 235),  # apron
+            "S": (64, 64, 72),    # shirt/vest
+        }
+        rows = [
+            "..HHHH..",
+            ".HHHHHH.",
+            ".HMHHHM.",
+            "..HHHH..",
+            ".SSSSSS.",
+            "SSAAAASS",
+            "SS.AA.SS",
+            "SS.AA.SS",
+            "..2..2..",
+            "........",
+        ]
+        rows = [r.ljust(8, ".")[:8] for r in rows]
+        pal = dict(palette)
+        pal["2"] = (40, 34, 30)
+        surf = _grid_to_surface(rows, pal)
+        return pygame.transform.scale(surf, (surf.get_width() * pixel_size, surf.get_height() * pixel_size))
 
     return _cached(key, build)

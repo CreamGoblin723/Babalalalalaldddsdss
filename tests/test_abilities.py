@@ -41,3 +41,38 @@ def test_has_ability():
     assert not p.has_ability("sharp_eyes")
     p.abilities.append("sharp_eyes")
     assert p.has_ability("sharp_eyes")
+
+
+def test_has_effect_true_for_permanent_ability():
+    p = Player()
+    p.abilities.append("lucky_coin")
+    assert p.has_effect("lucky_coin")
+
+
+def test_has_effect_true_for_temporary_bar_buff():
+    p = Player()
+    assert not p.has_effect("lucky_coin")
+    p.active_effects["temp_lucky_coin"] = True
+    assert p.has_effect("lucky_coin")
+    assert "lucky_coin" not in p.abilities  # still not permanently owned
+
+
+def test_bias_helpers_honor_temporary_effects_too():
+    p = Player()
+    assert abilities.biased_coin(p) == 0.5
+    p.active_effects["temp_lucky_coin"] = True
+    assert abilities.biased_coin(p) > 0.5
+
+
+def test_rigged_reels_bias():
+    p = Player()
+    assert abilities.rigged_reels_bias(p) == 0.0
+    p.abilities.append("rigged_reels")
+    assert abilities.rigged_reels_bias(p) > 0.0
+
+
+def test_wheel_whisperer_bias():
+    p = Player()
+    assert abilities.wheel_whisperer_bias(p) == 0.0
+    p.active_effects["temp_wheel_whisperer"] = True
+    assert abilities.wheel_whisperer_bias(p) > 0.0

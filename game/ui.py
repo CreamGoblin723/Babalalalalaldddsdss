@@ -34,14 +34,38 @@ def draw_text(surface, text, pos, size=14, color=C.UI_TEXT, bold=False, center=F
     return rect
 
 
-def draw_panel(surface, rect, bg=C.UI_PANEL, border=C.UI_BORDER, border_width=2):
-    pygame.draw.rect(surface, bg, rect)
-    pygame.draw.rect(surface, border, rect, border_width)
-    # corner ticks for a bit of pixel-art flourish
-    x, y, w, h = rect
-    tick = min(6, w // 8, h // 8) or 2
-    for (cx, cy) in [(x, y), (x + w - tick, y), (x, y + h - tick), (x + w - tick, y + h - tick)]:
-        pygame.draw.rect(surface, border, (cx, cy, tick, tick))
+def wrap_text(text, size=14, bold=False, max_width=200):
+    """Greedy word-wrap: split text into lines that each fit max_width
+    pixels at the given font. Used for description panels whose text
+    length varies per entry and can't be hand-tuned to always fit."""
+    font = get_font(size, bold)
+    words = text.split(" ")
+    lines = []
+    current = ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if font.size(trial)[0] <= max_width or not current:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+def draw_panel(surface, rect, bg=C.UI_PANEL, border=C.UI_BORDER, border_width=2, shadow=True, radius=3):
+    rect = pygame.Rect(rect)
+    if shadow:
+        # a flat offset silhouette reads as a drop shadow without needing
+        # per-pixel alpha blending, keeping this cheap on every panel/button
+        pygame.draw.rect(surface, (0, 0, 0), rect.move(2, 2), border_radius=radius)
+    pygame.draw.rect(surface, bg, rect, border_radius=radius)
+    pygame.draw.rect(surface, border, rect, border_width, border_radius=radius)
+    # a thin inner highlight along the top edge gives panels a touch of depth
+    if rect.w > 8 and rect.h > 8:
+        hi = tuple(min(255, c + 30) for c in border)
+        pygame.draw.line(surface, hi, (rect.x + radius, rect.y + 1), (rect.right - radius, rect.y + 1))
 
 
 def navigate_buttons(buttons, selected, event):
